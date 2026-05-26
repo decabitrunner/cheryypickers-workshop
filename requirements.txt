@@ -1,2 +1,4 @@
-Flask
+flask>=3.0
+numpy>=1.26
+scipy>=1.12
 Gunicorn
