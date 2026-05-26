@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Cherry-Picker's Toolkit</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      background: #f0ede8;
+      color: #2c2c2a;
+      min-height: 100vh;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    .page { max-width: 920px; margin: 0 auto; }
+
+    /* ── Header ── */
+    header { margin-bottom: 2rem; }
+
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #111;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: #666;
+      line-height: 1.65;
+      max-width: 640px;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 9px 22px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    button:disabled { opacity: 0.4; cursor: default; }
+
+    #btn-generate {
+      background: #1a1a18;
+      color: #fff;
+      border-color: #1a1a18;
+    }
+    #btn-generate:not(:disabled):hover { background: #333; }
+
+    #btn-reveal {
+      background: transparent;
+      color: #185FA5;
+      border-color: #185FA5;
+    }
+    #btn-reveal:not(:disabled):hover { background: #e8f1fb; }
+
+    .status-msg { font-size: 13px; color: #999; margin-left: 4px; }
+
+    /* ── Chart card ── */
+    .chart-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 0.5px solid rgba(0,0,0,0.08);
+      padding: 1.25rem 1.25rem 0.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .chart-label {
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 0.5rem;
+    }
+
+    #chart { width: 100%; height: 480px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      border: 0.5px solid rgba(0,0,0,0.08);
+      padding: 1rem 1.25rem 1rem;
+      border-top: 3px solid transparent;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      transition: border-top-color 0.3s;
+    }
+    .stat-card.cherry { border-top-color: #E24B4A; }
+    .stat-card.full   { border-top-color: #185FA5; }
+    .stat-card.gap    { border-top-color: #1D9E75; }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 2.2rem;
+      font-weight: 600;
+      line-height: 1;
+      margin-bottom: 5px;
+      letter-spacing: -0.02em;
+      transition: filter 0.4s;
+    }
+    .stat-value.cherry { color: #E24B4A; }
+    .stat-value.full   { color: #185FA5; }
+    .stat-value.gap    { color: #1D9E75; }
+
+    .stat-sub {
+      font-size: 12px;
+      color: #aaa;
+      transition: filter 0.4s;
+    }
+
+    .blurred { filter: blur(7px); pointer-events: none; user-select: none; }
+
+    /* ── Explanation box ── */
+    .explanation {
+      background: #fff;
+      border-radius: 10px;
+      border: 0.5px solid rgba(0,0,0,0.08);
+      padding: 1.25rem 1.5rem;
+      line-height: 1.7;
+      font-size: 14px;
+      color: #444;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .explanation h3 {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #1a1a18;
+      margin-bottom: 0.6rem;
+    }
+
+    .explanation p + p { margin-top: 0.75rem; }
+
+    .pill {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .pill.cherry { background: #fdecea; color: #c0302e; }
+    .pill.full   { background: #dceaf7; color: #185FA5; }
+    .pill.math   { background: #e8f5f0; color: #0f6e56; font-family: monospace; font-weight: 400; }
+
+    .placeholder { color: #bbb; font-style: italic; }
+
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr; }
+      h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>The Cherry-Picker's Toolkit</h1>
+    <p class="subtitle">
+      22 completely random (x, y) pairs. Picking the best ones for correlation makes anything seem connected.
+    </p>
+  </header>
+
+  <div class="controls">
+    <button id="btn-generate">⟳&nbsp; Generate New Data</button>
+    <button id="btn-reveal" disabled>👁&nbsp; Reveal All Data</button>
+    <span class="status-msg" id="status"></span>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-label" id="chart-label">Waiting for data…</div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card cherry">
+      <div class="stat-label">Cherry-picked r²</div>
+      <div class="stat-value cherry" id="val-r2-sub">—</div>
+      <div class="stat-sub" id="val-n-sub">— of 22 points selected</div>
+    </div>
+    <div class="stat-card full">
+      <div class="stat-label">Full dataset r²</div>
+      <div class="stat-value full blurred" id="val-r2-all">—</div>
+      <div class="stat-sub blurred" id="val-n-all">All 22 points</div>
+    </div>
+    <div class="stat-card gap">
+      <div class="stat-label">Inflation factor</div>
+      <div class="stat-value gap blurred" id="val-deception">—</div>
+      <div class="stat-sub blurred" id="val-deception-sub">cherry r² ÷ true r²</div>
+    </div>
+  </div>
+
+  <div class="explanation" id="explanation">
+    <p class="placeholder">Generate a dataset to see the explanation.</p>
+  </div>
+
+</div>
+
+<script>
+  let appState = { data: null, revealed: false };
+
+  const btnGen    = document.getElementById('btn-generate');
+  const btnReveal = document.getElementById('btn-reveal');
+  const statusEl  = document.getElementById('status');
+
+  btnGen.addEventListener('click', generate);
+  btnReveal.addEventListener('click', toggleReveal);
+
+  // ── Data fetch ────────────────────────────────────────────────────────────
+
+  async function generate() {
+    btnGen.disabled = true;
+    btnGen.textContent = '⟳  Generating…';
+    statusEl.textContent = '';
+
+    try {
+      const res  = await fetch('/api/generate');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      appState.data     = data;
+      appState.revealed = false;
+
+      renderChart(data, false);
+      updateStats(data, false);
+      updateExplanation(data, false);
+
+      btnReveal.disabled    = false;
+      btnReveal.textContent = '👁  Reveal All Data';
+
+      document.getElementById('chart-label').textContent =
+        `Researcher's view — ${data.n_sub} selected points shown`;
+
+    } catch (err) {
+      statusEl.textContent = 'Could not reach Flask server. Run: python app.py';
+    }
+
+    btnGen.disabled   = false;
+    btnGen.textContent = '⟳  Generate New Data';
+  }
+
+  function toggleReveal() {
+    if (!appState.data) return;
+    appState.revealed = !appState.revealed;
+    const { data, revealed } = appState;
+
+    renderChart(data, revealed);
+    updateStats(data, revealed);
+    updateExplanation(data, revealed);
+
+    btnReveal.textContent = revealed ? 'Hide Full Dataset' : 'Reveal All Data';
+    document.getElementById('chart-label').textContent = revealed
+      ? `Full dataset — all ${data.n_total} random points revealed`
+      : `Researcher's view — ${data.n_sub} selected points shown`;
+  }
+
+  // ── Chart ─────────────────────────────────────────────────────────────────
+
+  function regLine(m, b) {
+    return { x: [0, 100], y: [b, m * 100 + b] };
+  }
+
+  function renderChart(d, revealed) {
+    const pts = d.points;
+    const sub = d.subset;
+    const ign = d.ignored;
+
+    const subX = sub.map(i => pts[i][0]);
+    const subY = sub.map(i => pts[i][1]);
+    const ignX = ign.map(i => pts[i][0]);
+    const ignY = ign.map(i => pts[i][1]);
+
+    const rl_sub = regLine(...d.reg_sub);
+    const rl_all = regLine(...d.reg_all);
+
+    const traces = [];
+
+    // Ignored points — only visible after reveal
+    traces.push({
+      type: 'scatter', mode: 'markers',
+      name: `Discarded (${ign.length} pts)`,
+      x: ignX, y: ignY,
+      visible: revealed ? true : 'legendonly',
+      marker: {
+        color: '#d0ccc6',
+        size: 9,
+        line: { color: '#b8b4ae', width: 1 }
+      },
+      hovertemplate: 'x: %{x}<br>y: %{y}<extra>Discarded</extra>'
+    });
+
+    // Cherry-picked points
+    traces.push({
+      type: 'scatter', mode: 'markers',
+      name: `Cherry-picked (${sub.length} pts)`,
+      x: subX, y: subY,
+      marker: {
+        color: '#E24B4A',
+        size: 11,
+        line: { color: '#a82020', width: 1.2 }
+      },
+      hovertemplate: 'x: %{x}<br>y: %{y}<extra>Cherry-picked</extra>'
+    });
+
+    // Cherry trend line
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `Trend (cherry)  r = ${d.r_sub}`,
+      x: rl_sub.x, y: rl_sub.y,
+      line: { color: '#E24B4A', width: 2.5, dash: 'dash' },
+      hoverinfo: 'none'
+    });
+
+    // Full-data trend line — revealed only
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `Trend (all data)  r = ${d.r_all}`,
+      x: rl_all.x, y: rl_all.y,
+      visible: revealed ? true : 'legendonly',
+      line: { color: '#185FA5', width: 2.5, dash: 'dot' },
+      hoverinfo: 'none'
+    });
+
+    const layout = {
+      margin: { t: 16, r: 20, b: 52, l: 52 },
+      xaxis: {
+        range: [-3, 103], title: { text: 'X', standoff: 10 },
+        gridcolor: '#f0ede8', zeroline: false, tickfont: { size: 12 }
+      },
+      yaxis: {
+        range: [-3, 103], title: { text: 'Y', standoff: 10 },
+        gridcolor: '#f0ede8', zeroline: false, tickfont: { size: 12 }
+      },
+      plot_bgcolor:  '#fafaf8',
+      paper_bgcolor: '#fff',
+      legend: {
+        x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top',
+        bgcolor: 'rgba(255,255,255,0.92)',
+        bordercolor: '#e0ddd8', borderwidth: 1,
+        font: { size: 12 }
+      },
+      hovermode: 'closest',
+      font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', size: 13 },
+    };
+
+    Plotly.newPlot('chart', traces, layout, { responsive: true, displayModeBar: false });
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+
+  function updateStats(d, revealed) {
+    document.getElementById('val-r2-sub').textContent = d.r2_sub.toFixed(3);
+    document.getElementById('val-n-sub').textContent  =
+      `${d.n_sub} of ${d.n_total} points selected`;
+
+    document.getElementById('val-r2-all').textContent = d.r2_all.toFixed(3);
+    document.getElementById('val-n-all').textContent  = `All ${d.n_total} points`;
+
+    const inf = d.deception !== null ? d.deception + '×' : '∞';
+    document.getElementById('val-deception').textContent     = inf;
+    document.getElementById('val-deception-sub').textContent =
+      d.deception !== null
+        ? `cherry r² is ${inf} the true r²`
+        : 'true r² ≈ 0 (pure noise)';
+
+    ['val-r2-all', 'val-n-all', 'val-deception', 'val-deception-sub'].forEach(id => {
+      document.getElementById(id).classList.toggle('blurred', !revealed);
+    });
+  }
+
+  // ── Explanation ───────────────────────────────────────────────────────────
+
+  function updateExplanation(d, revealed) {
+    const el  = document.getElementById('explanation');
+    const dir = d.r_sub > 0 ? 'positive' : 'negative';
+    const verb = d.r_sub > 0 ? 'rises' : 'falls';
+    const sqrtN = Math.round(Math.sqrt(d.n_total));
+
+    if (!revealed) {
+      el.innerHTML = `
+        <h3>What a researcher might write…</h3>
+        <p>
+          "Analysis of <strong>${d.n_sub} observations</strong> reveals a clear
+          <span class="pill cherry">${dir} correlation</span>
+          (r² = <strong>${d.r2_sub}</strong>, r = <strong>${d.r_sub}</strong>).
+          As X increases, Y consistently ${verb}.
+          The linear trend is robust across the sample."
+        </p>
+        <p style="color:#bbb; font-size:13px;">
+          Click <strong>Reveal All Data</strong> to see what was quietly left out of the analysis.
+        </p>`;
+    } else {
+      const inf = d.deception !== null ? `<strong>${d.deception}×</strong>` : '<strong>infinitely</strong>';
+      el.innerHTML = `
+        <h3>What was actually going on</h3>
+        <p>
+          The full <span class="pill full">22-point dataset</span> is pure random noise.
+          r² = <strong>${d.r2_all}</strong>, r = <strong>${d.r_all}</strong>,
+          with no real relationship between X and Y whatsoever.
+          The apparent correlation came entirely from hand-picking
+          <strong>${d.n_sub} of ${d.n_total} points</strong> and discarding the other
+          <strong>${d.ignored.length}</strong>.
+        </p>
+        <p>
+          The cherry-picked r² was ${inf} the true r².
+          This is guaranteed by the
+          <span class="pill math">Erdős–Szekeres theorem</span>:
+          any sequence of n distinct values always contains a monotone subsequence
+          of length at least <span class="pill math">√n ≈ ${sqrtN}</span>.
+          Applied to random (x, y) pairs, that monotone subsequence will always
+          look convincingly correlated, regardless of whether any real relationship exists.
+        </p>
+        <p>
+          This is the mathematical backbone of many real-world cases of data dredging:
+          with enough variables or subgroups to choose from, a "significant" result
+          is always findable - even in noise.
+        </p>`;
+    }
+  }
+</script>
+</body>
+</html>
